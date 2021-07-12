@@ -1,0 +1,1 @@
+douban_update_sitemap = 'https://www.douban.com/sitemap_updated_index.xml'
