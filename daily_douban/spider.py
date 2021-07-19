@@ -1,3 +1,4 @@
+import datetime
 import gzip
 import os
 import pickle
@@ -12,7 +13,8 @@ class Spider:
     def __init__(self):
         self.session = requests.session()
         self.session.headers = {"User-Agent": "daily-douban spider"}
-        self.reviews = self.update_time = None
+        self.update_time = self.update_xmls = None
+        self.reviews = []
         self._cache_name = ".db_review.pkl"
         if os.path.isfile(self._cache_name):
             _local_cache = pickle.load(open(self._cache_name, 'rb'))
@@ -30,7 +32,7 @@ class Spider:
             line = line.strip()
             if line.startswith("<lastmod>"):
                 update_time = re.split("[<>]", line)[2]
-                self.update_time =
+                self.update_time = datetime.datetime.strptime(update_time, "%Y-%m-%dT%H:%M:%SZ")
                 break
         for line in update_xmls_text.split('\n'):
             line = line.strip()
@@ -38,26 +40,36 @@ class Spider:
                 update_xml = re.split("[<>]", line)[2]
                 update_xmls.append(update_xml)
         
-        self.updates = update_xmls
+        self.update_xmls = update_xmls
     
     def get_new_review(self, only_book=True, max_num=10, multi_thread=False):
-        if self.updates:
-            for u in self.updates:
+        if self.update_xmls:
+            for u in self.update_xmls:
                 print(u)
                 content = self.session.get(u).content
                 # print(content)
-                num = 0
                 c = gzip.decompress(content)
                 c = c.decode()
+                reviews = []
                 for line in c.split("\n"):
-                    if "review" in line and "book" in line:
-                        print(line)
-                        num += 1
-                        if num > max_num:
-                            break
+                    re_s = re.search("https://book.douban.com/review/\d+/", line)
+                    if re_s:
+                        # print(re_s.group())
+                        reviews.append(re_s.group())
+                self.reviews.extend(reviews)
+                print(reviews[-10:])
+                if not reviews:
+                    break
+        self._save_cache()
 
-        pass
-        
+    def _save_cache(self):
+        cache = {
+            "update_time": self.update_time,
+            "reviews": self.reviews,
+        }
+        pickle.dump(cache, open(self._cache_name, 'wb'))
+
+
 
 
 
