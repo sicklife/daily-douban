@@ -11,7 +11,7 @@ class Downloader:
         if headers and isinstance(headers, dict):
             self.session.headers = headers
 
-    def download(self,url,  method="get"):
+    def download(self, url,  method="get"):
         return self.session.request(method=method, url=url)
 
 
